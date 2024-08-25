@@ -2,10 +2,10 @@
 # It is not intended for manual editing.
 
 [metadata]
-groups = ["default"]
+groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:da56d8ee59de941a57e897470a42bd6cf4cf4fc2b47f18d57fc54217b91ab8eb"
+content_hash = "sha256:5c28cc3d09f763d66808479decba6ab0d1ec879060d2184f49a958843090a28a"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
@@ -75,6 +75,20 @@ files = [
 ]
 
 [[package]]
+name = "concurrent-log-handler"
+version = "0.9.25"
+requires_python = ">=3.6"
+summary = "RotatingFileHandler replacement with concurrency, gzip and Windows support"
+groups = ["default"]
+dependencies = [
+    "portalocker>=1.6.0",
+]
+files = [
+    {file = "concurrent_log_handler-0.9.25-py3-none-any.whl", hash = "sha256:157bee12914aa2a72246d1d0641ce07c1aa7a55faa3322bed02f21e60395eb82"},
+    {file = "concurrent_log_handler-0.9.25.tar.gz", hash = "sha256:1e2c6f021414e214d3dac66107894827a3e78db63018304a4f29e55ba549ac22"},
+]
+
+[[package]]
 name = "depthai"
 version = "2.27.0.0"
 requires_python = ">=3.7"
@@ -136,6 +150,15 @@ groups = ["default"]
 files = [
     {file = "idna-3.7-py3-none-any.whl", hash = "sha256:82fee1fc78add43492d3a1898bfa6d8a904cc97d8427f683ed8e798d07761aa0"},
     {file = "idna-3.7.tar.gz", hash = "sha256:028ff3aadf0609c1fd278d8ea3089299412a7a8b9bd005dd08b9f8285bcb5cfc"},
+]
+
+[[package]]
+name = "imutils"
+version = "0.5.4"
+summary = "A series of convenience functions to make basic image processing functions such as translation, rotation, resizing, skeletonization, displaying Matplotlib images, sorting contours, detecting edges, and much more easier with OpenCV and both Python 2.7 and Python 3."
+groups = ["default"]
+files = [
+    {file = "imutils-0.5.4.tar.gz", hash = "sha256:03827a9fca8b5c540305c0844a62591cf35a0caec199cb0f2f0a4a0fb15d8f24"},
 ]
 
 [[package]]
@@ -210,6 +233,20 @@ files = [
 ]
 
 [[package]]
+name = "portalocker"
+version = "2.10.1"
+requires_python = ">=3.8"
+summary = "Wraps the portalocker recipe for easy usage"
+groups = ["default"]
+dependencies = [
+    "pywin32>=226; platform_system == \"Windows\"",
+]
+files = [
+    {file = "portalocker-2.10.1-py3-none-any.whl", hash = "sha256:53a5984ebc86a025552264b459b46a2086e269b21823cb572f8f28ee759e45bf"},
+    {file = "portalocker-2.10.1.tar.gz", hash = "sha256:ef1bf844e878ab08aee7e40184156e1151f228f103aa5c6bd0724cc330960f8f"},
+]
+
+[[package]]
 name = "pytube"
 version = "15.0.0"
 requires_python = ">=3.7"
@@ -230,6 +267,18 @@ dependencies = [
 ]
 files = [
     {file = "PyTurboJPEG-1.6.4.tar.gz", hash = "sha256:90020514aed59f02fba381b9d767fb91554304bcf64a78daa73ce934cfca34a0"},
+]
+
+[[package]]
+name = "pywin32"
+version = "306"
+summary = "Python for Window Extensions"
+groups = ["default"]
+marker = "platform_system == \"Windows\""
+files = [
+    {file = "pywin32-306-cp312-cp312-win32.whl", hash = "sha256:383229d515657f4e3ed1343da8be101000562bf514591ff383ae940cad65458b"},
+    {file = "pywin32-306-cp312-cp312-win_amd64.whl", hash = "sha256:37257794c1ad39ee9be652da0462dc2e394c8159dfd913a8a4e8eb6fd346da0e"},
+    {file = "pywin32-306-cp312-cp312-win_arm64.whl", hash = "sha256:5821ec52f6d321aa59e2db7e0a35b997de60c201943557d108af9d4ae1ec7040"},
 ]
 
 [[package]]
@@ -328,6 +377,17 @@ files = [
 ]
 
 [[package]]
+name = "setuptools"
+version = "73.0.1"
+requires_python = ">=3.8"
+summary = "Easily download, build, install, upgrade, and uninstall Python packages"
+groups = ["dev"]
+files = [
+    {file = "setuptools-73.0.1-py3-none-any.whl", hash = "sha256:b208925fcb9f7af924ed2dc04708ea89791e24bde0d3020b27df0e116088b34e"},
+    {file = "setuptools-73.0.1.tar.gz", hash = "sha256:d59a3e788ab7e012ab2c4baed1b376da6366883ee20d7a5fc426816e3d7b1193"},
+]
+
+[[package]]
 name = "types-pyside2"
 version = "5.15.2.1.7"
 summary = "The most accurate stubs for PySide2"
@@ -346,6 +406,17 @@ groups = ["default"]
 files = [
     {file = "urllib3-2.2.2-py3-none-any.whl", hash = "sha256:a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472"},
     {file = "urllib3-2.2.2.tar.gz", hash = "sha256:dd505485549a7a552833da5e6063639d0d177c04f23bc3864e41e5dc5f612168"},
+]
+
+[[package]]
+name = "wheel"
+version = "0.44.0"
+requires_python = ">=3.8"
+summary = "A built-package format for Python"
+groups = ["dev"]
+files = [
+    {file = "wheel-0.44.0-py3-none-any.whl", hash = "sha256:2376a90c98cc337d18623527a97c31797bd02bad0033d41547043a1cbfbe448f"},
+    {file = "wheel-0.44.0.tar.gz", hash = "sha256:a29c3f2817e95ab89aa4660681ad547c0e9547f20e75b0562fe7723c9a2a9d49"},
 ]
 
 [[package]]

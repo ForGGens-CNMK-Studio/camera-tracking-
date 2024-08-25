@@ -1,66 +1,200 @@
-import depthai as dai
-import numpy as np
+import logging
+import math
+
 import cv2
+import numpy as np
 
-# Create pipeline
-pipeline = dai.Pipeline()
+from human_demo_py.alerting import AlertingGate, AlertingGateDebug
+from human_demo_py.config import MODEL_NAME, DEBUG
+from human_demo_py.depthai_utils import DepthAI, DepthAIDebug
+from human_demo_py.distance import DistanceGuardian, DistanceGuardianDebug
+from human_demo_py.height import HeightGuardian, HeightGuardianDebug
 
-# Define sources and outputs
-camRgb = pipeline.createColorCamera()
-monoLeft = pipeline.createMonoCamera()
-monoRight = pipeline.createMonoCamera()
-stereo = pipeline.createStereoDepth()
+log = logging.getLogger(__name__)
 
-xoutDepth = pipeline.createXLinkOut()
-xoutRgb = pipeline.createXLinkOut()
 
-xoutDepth.setStreamName("depth")
-xoutRgb.setStreamName("rgb")
+# class Main:
+#     depthai_class = DepthAI
+#     distance_guardian_class = DistanceGuardian
+#     alerting_gate_class = AlertingGate
 
-# Properties
-camRgb.setPreviewSize(640, 480)
-camRgb.setInterleaved(False)
+#     def __init__(self):
+#         self.depthai = self.depthai_class(MODEL_NAME)
+#         self.distance_guardian = self.distance_guardian_class()
+#         self.alerting_gate = self.alerting_gate_class()
 
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+#     def parse_frame(self, frame, results):
+#         distance_results = self.distance_guardian.parse_frame(frame, results)
+#         should_alert = self.alerting_gate.parse_frame(distance_results)
+#         if should_alert:
+#             img_h = frame.shape[0]
+#             img_w = frame.shape[1]
+#             cv2.putText(
+#                 frame,
+#                 "Too close",
+#                 (int(img_w / 3), int(img_h / 2)),
+#                 cv2.FONT_HERSHEY_TRIPLEX,
+#                 2,
+#                 (0, 0, 255),
+#                 1,
+#             )
+#         return distance_results, should_alert
 
-# Stereo depth
-stereo.setConfidenceThreshold(255)
-stereo.setLeftRightCheck(True)
-stereo.setSubpixel(True)
+#     def run(self):
+#         try:
+#             log.info("Setup complete, parsing frames...")
+#             for frame, results in self.depthai.capture():
+#                 self.parse_frame(frame, results)
+#         finally:
+#             del self.depthai
 
-# Linking
-monoLeft.out.link(stereo.left)
-monoRight.out.link(stereo.right)
-stereo.depth.link(xoutDepth.input)
-camRgb.preview.link(xoutRgb.input)
 
-# Connect to device and start pipeline
-with dai.Device(pipeline) as device:
-    depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
-    rgbQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+# class MainDebug(Main):
+#     depthai_class = DepthAIDebug
+#     distance_guardian_class = DistanceGuardianDebug
+#     alerting_gate_class = AlertingGateDebug
+#     max_z = 4
+#     min_z = 1
+#     max_x = 0.9
+#     min_x = -0.7
 
-    while True:
-        inDepth = depthQueue.get()
-        inRgb = rgbQueue.get()
+#     def __init__(self):
+#         super().__init__()
+#         self.distance_bird_frame = self.make_bird_frame()
 
-        depthFrame = inDepth.getFrame()
-        colorFrame = inRgb.getCvFrame()
+#     def make_bird_frame(self):
+#         fov = 68.7938
+#         min_distance = 0.827
+#         frame = np.zeros((320, 100, 3), np.uint8)
+#         min_y = int(
+#             (1 - (min_distance - self.min_z) / (self.max_z - self.min_z))
+#             * frame.shape[0]
+#         )
+#         cv2.rectangle(
+#             frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1
+#         )
 
-        # Calculate height
-        # Assuming the person is in the middle of the frame
-        height_pixel = depthFrame.shape[0]
+#         alpha = (180 - fov) / 2
+#         center = int(frame.shape[1] / 2)
+#         max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
+#         fov_cnt = np.array(
+#             [
+#                 (0, frame.shape[0]),
+#                 (frame.shape[1], frame.shape[0]),
+#                 (frame.shape[1], max_p),
+#                 (center, frame.shape[0]),
+#                 (0, max_p),
+#                 (0, frame.shape[0]),
+#             ]
+#         )
+#         cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
+#         return frame
 
-        # Convert pixel to real-world distance
-        # You might need to calibrate this conversion factor based on the camera's position
-        # and the specific setup where the camera is being used.
-        # Generally, this would involve some calibration against known height.
-        height_meters = np.mean(depthFrame[:, depthFrame.shape[1] // 2]) / 1000
+#     def calc_x(self, val):
+#         norm = min(self.max_x, max(val, self.min_x))
+#         center = (
+#             (norm - self.min_x)
+#             / (self.max_x - self.min_x)
+#             * self.distance_bird_frame.shape[1]
+#         )
+#         bottom_x = max(center - 2, 0)
+#         top_x = min(center + 2, self.distance_bird_frame.shape[1])
+#         return int(bottom_x), int(top_x)
 
-        print(f"Estimated height: {height_meters:.2f} meters")
+#     def calc_z(self, val):
+#         norm = min(self.max_z, max(val, self.min_z))
+#         center = (
+#             1 - (norm - self.min_z) / (self.max_z - self.min_z)
+#         ) * self.distance_bird_frame.shape[0]
+#         bottom_z = max(center - 2, 0)
+#         top_z = min(center + 2, self.distance_bird_frame.shape[0])
+#         return int(bottom_z), int(top_z)
 
-        # Display the color frame for debugging
-        cv2.imshow("Color", colorFrame)
+#     def parse_frame(self, frame, results):
+#         distance_results, should_alert = super().parse_frame(frame, results)
 
-        if cv2.waitKey(1) == ord("q"):
-            break
+#         bird_frame = self.distance_bird_frame.copy()
+#         too_close_ids = []
+#         for result in distance_results:
+#             if result["dangerous"]:
+#                 left, right = self.calc_x(result["detection1"]["depth_x"])
+#                 top, bottom = self.calc_z(result["detection1"]["depth_z"])
+#                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
+#                 too_close_ids.append(result["detection1"]["id"])
+#                 left, right = self.calc_x(result["detection2"]["depth_x"])
+#                 top, bottom = self.calc_z(result["detection2"]["depth_z"])
+#                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
+#                 too_close_ids.append(result["detection2"]["id"])
+
+#         for result in results:
+#             if result["id"] not in too_close_ids:
+#                 left, right = self.calc_x(result["depth_x"])
+#                 top, bottom = self.calc_z(result["depth_z"])
+#                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
+#         numpy_horizontal = np.hstack((frame, bird_frame))
+#         cv2.imshow("Frame", numpy_horizontal)
+#         key = cv2.waitKey(1)
+
+#         if key == ord("q"):
+#             raise StopIteration()
+
+
+class Main:
+    depthai_class = DepthAI
+    height_guardian_class = HeightGuardian  # Use the new height detection class
+    alerting_gate_class = AlertingGate
+
+    def __init__(self):
+        self.depthai = self.depthai_class(MODEL_NAME)
+        self.height_guardian = self.height_guardian_class()
+        self.alerting_gate = self.alerting_gate_class()
+
+    def parse_frame(self, frame, results):
+        height_results = self.height_guardian.parse_frame(frame, results)
+        # You could add additional alerting logic based on height if needed
+        for result in height_results:
+            height = result["height"]
+            log.info(f"Detected person's height: {height:.2f} meters")
+
+        return (
+            height_results,
+            False,
+        )  # No alerting for height, unless you want to add height-based alerts
+
+    def run(self):
+        try:
+            log.info("Setup complete, parsing frames...")
+            for frame, results in self.depthai.capture():
+                log.debug(self.parse_frame(frame, results))
+        finally:
+            del self.depthai
+
+
+class MainDebug(Main):
+    depthai_class = DepthAIDebug
+    height_guardian_class = HeightGuardianDebug
+    alerting_gate_class = AlertingGateDebug
+
+    def __init__(self):
+        super().__init__()
+
+    def parse_frame(self, frame, results):
+        height_results, should_alert = super().parse_frame(frame, results)
+
+        cv2.imshow("Frame", frame)
+        key = cv2.waitKey(1)
+
+        if key == ord("q"):
+            raise StopIteration()
+
+        return height_results, should_alert
+
+
+if __name__ == "__main__":
+    if DEBUG:
+        log.info("Setting up debug run...")
+        MainDebug().run()
+    else:
+        log.info("Setting up non-debug run...")
+        Main().run()
