@@ -13,6 +13,9 @@ unul dintre aceste doua obiecte print()
 
 Mai mult, daca nu vrem ca codul asta sa ia alte obiecte, mi-am dat seama cum.
 
+Nu prea ma descurc cu editarea fisierului main.py ca sa includa fisierul asta, voi face
+acest lucru marti
+
 PS: codului astuia cred ca ii trebuie si fisierul .blob aferent, dar nu l-am pus aici.
 '''
 import cv2
