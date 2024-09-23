@@ -12,6 +12,9 @@ dependencies = [
     "scipy>=1.14.0",
     "concurrent-log-handler>=0.9.25",
     "imutils>=0.5.4",
+    "fastapi[standard]>=0.115.0",
+    "uvicorn>=0.30.6",
+    "pydantic-settings>=2.5.2",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -24,6 +27,8 @@ build-backend = "pdm.backend"
 [tool.pdm.scripts]
 dev.cmd = "python -m human_demo_py"
 dev.env = { DEBUG = "true" }
+devf.cmd = "fastapi dev src/human_demo_py/__main__.py"
+devf.env = { DEBUG = "true" }
 
 [tool.pdm.dev-dependencies]
 dev = ["wheel>=0.44.0", "setuptools>=73.0.1"]

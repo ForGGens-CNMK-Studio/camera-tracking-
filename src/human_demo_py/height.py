@@ -31,6 +31,8 @@ class HeightGuardian:
 class HeightGuardianDebug(HeightGuardian):
     def parse_frame(self, frame, boxes):
         results = super().parse_frame(frame, boxes)
+        if frame is None:
+            return results
         overlay = frame.copy()
         for result in results:
             x1 = result["detection"]["x_min"]
