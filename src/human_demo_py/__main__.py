@@ -20,9 +20,11 @@ from threading import Lock
 
 log = logging.getLogger(__name__)
 streaming = True
-lock = Lock()
+streaming_lock = Lock()
+heights_lock = Lock()
 frame = None
 heights = []
+heights_json: bytes = b"[]"
 
 
 class Main:
@@ -36,11 +38,16 @@ class Main:
         self.alerting_gate = self.alerting_gate_class()
 
     def parse_frame(self, frame, bboxes, pose_detections):
+        # global heights
         height_results = self.height_guardian.parse_frame(frame, bboxes)
         # You could add additional alerting logic based on height if needed
         for result in height_results:
             height = result["height"]
             log.info(f"Detected person's height: {height:.2f} meters")
+
+        # with heights_lock:  # Ensure thread-safe access
+        #     heights = height_results
+        #     log.debug("Heights: %s", heights)
 
         return (
             height_results,
@@ -54,8 +61,8 @@ class Main:
             for framed, bboxes, pose_detections in self.depthai.capture():
                 heights = self.parse_frame(frame, bboxes, pose_detections)[0]
                 frame = framed
-                if framed is not None:
-                    log.debug("Frame shape: %s", framed.shape)
+                # if framed is not None:
+                #     log.debug("Frame shape: %s", framed.shape)
         finally:
             del self.depthai
 
@@ -69,9 +76,13 @@ class MainDebug(Main):
         super().__init__()
 
     def parse_frame(self, frame, bboxes, pose_detections):
+        global heights
         height_results, should_alert = super().parse_frame(
             frame, bboxes, pose_detections
         )
+
+        log.debug("Height results: %s", height_results)
+        log.debug("Global Height results: %s", heights)
 
         if frame is not None:
             cv2.imshow("Frame", frame)
@@ -95,7 +106,7 @@ if __name__ == "__main__":
 def generate_frames():
     global frame, streaming
     while True:
-        with lock:
+        with streaming_lock:
             if not streaming:
                 continue
         # Encode frame as JPEG
@@ -103,7 +114,7 @@ def generate_frames():
             continue
         ret, buffer = cv2.imencode(".jpg", frame)
         frameb = buffer.tobytes()
-        log.debug("Frame size: %d", len(frameb))
+        # log.debug("Frame size: %d", len(frameb))
 
         # Yield frame as a byte stream
         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frameb + b"\r\n")
@@ -113,17 +124,21 @@ def generate_frames():
 
 
 async def generate_heights():
+    global heights_json
     while True:
         # Use asyncio sleep for non-blocking delay
         await asyncio.sleep(1 / 24)
 
         # Lock can be moved inside where it's strictly necessary
-        with lock:
+        with streaming_lock:
             if not streaming:
                 continue
 
-        # JSON conversion and yield (convert to bytes here)
-        heights_json = json.dumps(heights).encode("utf-8")
+        log.debug("Heights to send: %s", heights)
+        # with heights_lock:
+        #     # JSON conversion and yield (convert to bytes here)
+        #     heights_json = json.dumps(heights).encode("utf-8")
+        #     log.debug("Heights: %s", heights_json)
         yield (
             b"--height\r\n"
             b"Content-Type: application/json\r\n\r\n" + heights_json + b"\r\n"
@@ -183,7 +198,7 @@ async def height_feed():
 @app.post("/control")
 async def control_stream(action: str):
     global streaming
-    with lock:
+    with streaming_lock:
         if action == "pause":
             streaming = False
         elif action == "play":
