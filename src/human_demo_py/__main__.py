@@ -135,10 +135,23 @@ async def generate_heights():
                 continue
 
         log.debug("Heights to send: %s", heights)
-        # with heights_lock:
-        #     # JSON conversion and yield (convert to bytes here)
-        #     heights_json = json.dumps(heights).encode("utf-8")
-        #     log.debug("Heights: %s", heights_json)
+        # convert the id field from each object in the array from uuid to string
+        height_local = []
+        for height in heights:
+            height_local.append(
+                {
+                    "height": height["height"],
+                }
+            )
+        with heights_lock:
+            try:
+                # JSON conversion
+                heights_json = json.dumps(height_local).encode("utf-8")
+                log.debug("Heights JSON: %s", heights_json)
+            except Exception as e:
+                # Log any exception that occurs during JSON encoding
+                log.error("Error encoding heights to JSON: %s", e)
+                heights_json = b"[]"  # Set to empty array in case of error
         yield (
             b"--height\r\n"
             b"Content-Type: application/json\r\n\r\n" + heights_json + b"\r\n"
